@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLONG Connection Verification</title>
+    <style>
+        /* Basic Styling */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg: #111827;
+            --card-bg: #1F2937;
+            --text: #F9FAFB;
+            --success: #10B981;
+            --fail: #EF4444;
+            --primary: #667eea;
+            --border: #4B5563;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* The main verification card */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 40px 50px;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Status Icon Styling */
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            height: 70px; /* Reserve space */
+        }
+        
+        /* Spinner for 'Verifying' state */
+        .spinner {
+            border: 5px solid #4B5563;
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* The status text itself */
+        .status-text {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            transition: color 0.3s ease;
+        }
+
+        .status-text.success { color: var(--success); }
+        .status-text.fail { color: var(--fail); }
+
+        /* Descriptive message */
+        .message {
+            color: #9CA3AF;
+            font-size: 14px;
+            min-height: 40px; /* Reserve space to prevent layout shift */
+        }
+
+        /* Link back to the main panel */
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+            opacity: 0; /* Hidden by default */
+        }
+        .back-link.visible {
+            opacity: 1;
+        }
+        .back-link:hover {
+            background-color: #5568d3;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="statusIcon" class="status-icon">
+            <div class="spinner"></div>
+        </div>
+        <h1 id="statusText" class="status-text">VERIFYING...</h1>
+        <p id="message" class="message">Attempting to establish a secure link with your Minecraft server...</p>
+        <a id="backLink" href="plong-panel-final.html" class="back-link">Return to Control Panel</a>
+    </div>
+
+    <script>
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // ⚙️ CONFIGURATION: This secret must match the 'DEATH13579' code in your plugin
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        const SHARED_SECRET_CODE = 'DEATH13579';
+
+        /**
+         * This function runs automatically when the page loads.
+         * It looks for parameters in the URL sent by the Minecraft plugin.
+         * 
+         * The Minecraft plugin will generate a URL like this:
+         * https://yoursite.netlify.app/link-verify.html?code=DEATH13579&server_ip=123.45.67.89
+         */
+        window.onload = function() {
+            // Get elements from the DOM
+            const statusIconEl = document.getElementById('statusIcon');
+            const statusTextEl = document.getElementById('statusText');
+            const messageEl = document.getElementById('message');
+            const backLinkEl = document.getElementById('backLink');
+
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const receivedCode = urlParams.get('code');      // e.g., 'DEATH13579'
+            const serverIp = urlParams.get('server_ip');  // e.g., '123.45.67.89'
+
+            // --- Verification Logic ---
+            setTimeout(() => { // Simulate a small delay for better UX
+                if (receivedCode === SHARED_SECRET_CODE && serverIp) {
+                    // SUCCESS! The code from the server is correct.
+                    statusIconEl.innerHTML = '✅';
+                    statusTextEl.textContent = 'CONNECTED';
+                    statusTextEl.classList.add('success');
+                    messageEl.innerHTML = `Successfully linked to server at <strong>${serverIp}</strong>.<br>The API base URL has been saved to this browser.`;
+                    
+                    // The "autodetection" magic happens here:
+                    // We save the detected server IP as the API_BASE for the main panel.
+                    const apiBaseUrl = `https://${serverIp}`; // Assuming HTTPS and standard port
+                    localStorage.setItem('plong_api_base', apiBaseUrl);
+                    
+                    // Show the link to go back to the main panel
+                    backLinkEl.classList.add('visible');
+                    
+                } else {
+                    // FAILURE. The code is wrong or missing.
+                    statusIconEl.innerHTML = '❌';
+                    statusTextEl.textContent = 'CONNECTION FAILED';
+                    statusTextEl.classList.add('fail');
+                    messageEl.textContent = 'The verification code is invalid or missing. Please run the /link command again from your Minecraft server.';
+                }
+            }, 1500); // 1.5 second delay
+        };
+    </script>
+</body>
+</html>
